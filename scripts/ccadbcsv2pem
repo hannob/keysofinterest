@@ -1,0 +1,14 @@
+#!/usr/bin/python3
+
+import csv
+import pathlib
+import sys
+
+i = 0
+infile = sys.argv[1]
+with open(infile) as csvfile:
+    creader = csv.reader(csvfile)
+    for row in creader:
+        if row[1].startswith("-----BEGIN CERTIFICATE-----"):
+            pathlib.Path(f"{infile}-{i}.crt").write_text(row[1])
+            i += 1

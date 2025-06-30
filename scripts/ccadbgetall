@@ -1,0 +1,5 @@
+#!/bin/bash
+
+for x in $(seq 1990 10 2020); do
+	curl https://ccadb.my.salesforce-sites.com/ccadb/AllCertificatePEMsCSVFormat?NotBeforeDecade=$x >$x.csv
+done

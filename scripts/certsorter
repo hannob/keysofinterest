@@ -1,0 +1,47 @@
+#!/usr/bin/python3
+
+import argparse
+import base64
+import os
+import pathlib
+import re
+
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.serialization import Encoding
+
+ap = argparse.ArgumentParser()
+ap.add_argument("certs", nargs="+")
+ap.add_argument("-o", "--outdir", required=True)
+args = ap.parse_args()
+
+os.mkdir(args.outdir)
+
+for certfn in args.certs:
+    raw = pathlib.Path(certfn).read_bytes()
+    try:
+        cert = x509.load_pem_x509_certificate(raw)
+    except ValueError as e:
+        print(f"ERROR parsing {certfn}")
+        print(e)
+        continue
+    cn = cert.subject.get_attributes_for_oid(x509.oid.NameOID.COMMON_NAME)
+    myname = None
+    if len(cn) > 0:
+        myname = cn[0].value
+    if not myname:
+        cn = cert.subject.get_attributes_for_oid(x509.oid.NameOID.ORGANIZATIONAL_UNIT_NAME)
+        if len(cn) > 0:
+            myname = cn[0].value
+    if not myname:
+        cn = cert.subject.get_attributes_for_oid(x509.oid.NameOID.ORGANIZATION_NAME)
+        if len(cn) > 0:
+            myname = cn[0].value
+    if not myname:
+        myname = "_NONAME_"
+
+    myname = re.sub(r"[^0-9A-Za-z._-]", "_", myname)
+    fp = base64.urlsafe_b64encode(cert.fingerprint(hashes.SHA256())[0:12]).decode()
+    outfn = f"{myname}-{fp}.crt"
+    pem = cert.public_bytes(Encoding.PEM)
+    pathlib.Path(os.path.join(args.outdir, outfn)).write_bytes(pem)
