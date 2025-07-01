@@ -41,6 +41,8 @@ for certfn in args.certs:
         myname = "_NONAME_"
 
     myname = re.sub(r"[^0-9A-Za-z._-]", "_", myname)
+    if myname[0] in [".", "-"]:
+        myname = "_" + myname[1:]
     fp = base64.urlsafe_b64encode(cert.fingerprint(hashes.SHA256())[0:12]).decode()
     outfn = f"{myname}-{fp}.crt"
     pem = cert.public_bytes(Encoding.PEM)
