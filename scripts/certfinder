@@ -1,0 +1,36 @@
+#!/usr/bin/python3
+
+import argparse
+import os
+import pathlib
+
+from cryptography import x509
+from cryptography.hazmat.primitives.serialization import Encoding
+
+ap = argparse.ArgumentParser()
+ap.add_argument("dirs", nargs="+")
+ap.add_argument("-o", "--outdir", required=True)
+args = ap.parse_args()
+
+os.mkdir(args.outdir)
+
+c = 0
+for curdir in args.dirs:
+    for root, _, files in os.walk(curdir):
+        for fn in files:
+            fp = os.path.join(root, fn)
+            raw = pathlib.Path(fp).read_bytes()
+            ii = -1
+            while True:
+                try:
+                    ii = raw.index(b"\x30\x82", ii + 1)
+                except ValueError:
+                    break
+                alen = int.from_bytes(raw[ii + 2:ii + 2 + 2], "big")
+                try:
+                    crt = x509.load_der_x509_certificate(raw[ii:ii + 4 + alen])
+                except ValueError:
+                    continue
+                pem = crt.public_bytes(Encoding.PEM)
+                pathlib.Path(f"{args.outdir}/{c}.crt").write_bytes(pem)
+                c += 1
