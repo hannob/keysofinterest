@@ -13,9 +13,10 @@ from cryptography.hazmat.primitives.serialization import Encoding
 ap = argparse.ArgumentParser()
 ap.add_argument("certs", nargs="+")
 ap.add_argument("-o", "--outdir", required=True)
+ap.add_argument("-e", "--exist", action="store_true")
 args = ap.parse_args()
 
-os.mkdir(args.outdir)
+os.makedirs(args.outdir, exist_ok=args.exist)
 
 for certfn in args.certs:
     raw = pathlib.Path(certfn).read_bytes()
