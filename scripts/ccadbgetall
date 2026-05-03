@@ -2,6 +2,9 @@
 #
 # SPDX-License-Identifier: 0BSD
 
-for x in $(seq 1990 10 2020); do
+curdec=$(date +%Y)
+curdec=${curdec:0:3}0
+
+for x in $(seq 1990 10 $curdec); do
 	curl https://ccadb.my.salesforce-sites.com/ccadb/AllCertificatePEMsCSVFormat?NotBeforeDecade=$x >$x.csv
 done
