@@ -1,0 +1,8 @@
+#!/bin/bash
+#
+# SPDX-License-Identifier: 0BSD
+
+for x in KEK PK db dbx; do
+	efi-readvar -v $x -o $x.esl
+	sig-list-to-certs $x.esl $x-certs
+done
