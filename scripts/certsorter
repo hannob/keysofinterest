@@ -4,30 +4,24 @@
 
 import argparse
 import base64
+import hashlib
 import os
 import pathlib
 import re
 
+import OpenSSL
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.serialization import Encoding
 
-ap = argparse.ArgumentParser()
-ap.add_argument("certs", nargs="+")
-ap.add_argument("-o", "--outdir", required=True)
-ap.add_argument("-e", "--exist", action="store_true")
-args = ap.parse_args()
 
-os.makedirs(args.outdir, exist_ok=args.exist)
-
-for certfn in args.certs:
-    raw = pathlib.Path(certfn).read_bytes()
+def parsecert_cryptography(rawcert):
     try:
-        cert = x509.load_pem_x509_certificate(raw)
+        cert = x509.load_pem_x509_certificate(rawcert)
     except ValueError as e:
         print(f"ERROR parsing {certfn}")
         print(e)
-        continue
+        return (None, None, None)
     cn = cert.subject.get_attributes_for_oid(x509.oid.NameOID.COMMON_NAME)
     myname = None
     if len(cn) > 0:
@@ -42,11 +36,55 @@ for certfn in args.certs:
             myname = cn[0].value
     if not myname:
         myname = "_NONAME_"
+    certhash = cert.fingerprint(hashes.SHA256())
+    pem = cert.public_bytes(Encoding.PEM)
+    return (myname, certhash, pem)
+
+
+def parsecert(rawcert):
+    try:
+        crt = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, rawcert)
+    except OpenSSL.crypto.Error as e:
+        print(f"ERROR parsing {certfn}")
+        print(e)
+        return (None, None, None)
+    subject = crt.get_subject()
+    myname = subject.commonName
+    if not myname:
+        myname = subject.OU
+    if not myname:
+        myname = subject.O
+    if not myname:
+        myname = "_NONAME_"
+
+    der = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_ASN1, crt)
+    certhash = hashlib.sha256(der).digest()
+    pem = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, crt)
+    return (myname, certhash, pem)
+
+
+ap = argparse.ArgumentParser()
+ap.add_argument("certs", nargs="+")
+ap.add_argument("-o", "--outdir", required=True)
+ap.add_argument("-e", "--exist", action="store_true")
+ap.add_argument("--cryptography", action="store_true", help="Use cryptography, not pyopenssl")
+args = ap.parse_args()
+
+os.makedirs(args.outdir, exist_ok=args.exist)
+
+for certfn in args.certs:
+    raw = pathlib.Path(certfn).read_bytes()
+
+    if args.cryptography:
+        myname, certhash, pem = parsecert_cryptography(raw)
+    else:
+        myname, certhash, pem = parsecert(raw)
+    if not myname:
+        continue
 
     myname = re.sub(r"[^0-9A-Za-z._-]", "_", myname)
     if myname[0] in [".", "-"]:
         myname = "_" + myname[1:]
-    fp = base64.urlsafe_b64encode(cert.fingerprint(hashes.SHA256())[0:12]).decode()
+    fp = base64.urlsafe_b64encode(certhash[0:12]).decode()
     outfn = f"{myname}-{fp}.crt"
-    pem = cert.public_bytes(Encoding.PEM)
     pathlib.Path(os.path.join(args.outdir, outfn)).write_bytes(pem)
