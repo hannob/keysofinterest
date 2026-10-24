@@ -83,7 +83,7 @@ for certfn in args.certs:
         continue
 
     myname = re.sub(r"[^0-9A-Za-z._-]", "_", myname)
-    if myname[0] in [".", "-"]:
+    if myname[0] in {".", "-"}:
         myname = "_" + myname[1:]
     fp = base64.urlsafe_b64encode(certhash[0:12]).decode()
     outfn = f"{myname}-{fp}.crt"
