@@ -1,16 +1,24 @@
 #!/usr/bin/env python3
-#
 # SPDX-License-Identifier: 0BSD
 
+import argparse
 import csv
+import os
 import pathlib
 import sys
 
+ap = argparse.ArgumentParser()
+ap.add_argument("csvs", nargs="+")
+ap.add_argument("-o", "--outdir", default="crts")
+args = ap.parse_args()
+
+os.mkdir(args.outdir)
+
 i = 0
-infile = sys.argv[1]
-with open(infile) as csvfile:
-    creader = csv.reader(csvfile)
-    for row in creader:
-        if row[1].startswith("-----BEGIN CERTIFICATE-----"):
-            pathlib.Path(f"{infile}-{i}.crt").write_text(row[1])
-            i += 1
+for infile in args.csvs:
+    with open(infile) as csvfile:
+        creader = csv.reader(csvfile)
+        for row in creader:
+            if row[1].startswith("-----BEGIN CERTIFICATE-----"):
+                pathlib.Path(f"{args.outdir}/{i}.crt").write_text(row[1])
+                i += 1
