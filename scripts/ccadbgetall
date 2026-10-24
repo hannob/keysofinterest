@@ -6,5 +6,5 @@ curdec=$(date +%Y)
 curdec=${curdec:0:3}0
 
 for x in $(seq 1990 10 $curdec); do
-	curl https://ccadb.my.salesforce-sites.com/ccadb/AllCertificatePEMsCSVFormat?NotBeforeDecade=$x >$x.csv
+	curl -s https://ccadb.my.salesforce-sites.com/ccadb/AllCertificatePEMsCSVFormat?NotBeforeDecade=$x >$x.csv
 done
